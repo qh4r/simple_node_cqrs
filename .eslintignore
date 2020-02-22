@@ -1,0 +1,5 @@
+plop-templates
+**/*.d.ts
+*.json
+**/migrations/*
+**/plop-templates/*
