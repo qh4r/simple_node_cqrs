@@ -10,53 +10,25 @@ export interface LoginActionProps {
 export const loginActionValidation = celebrate(
   {
     body: Joi.object().keys({
-      authToken: Joi.string().required(),
+      email: Joi.string().required(),
+      password: Joi.string().required(),
     }),
   },
   { abortEarly: false },
 );
 
-/**
- * @swagger
- *
- * /api/users/login:
- *   post:
- *     security: []
- *     summary: login to app
- *     requestBody:
- *       content:
- *         application/json:
- *          schema:
- *            type: object
- *            properties:
- *              authToken:
- *                type: string
- *     responses:
- *       200:
- *        description: auth success
- *        content:
- *          application/json:
- *            schema:
- *              type: object
- *              properties:
- *                accessToken:
- *                  type: string
- *                refreshToken:
- *                  type: string
- *       400:
- *         description: Validation Error
- *       500:
- *         description: Internal Server Error
- */
 const loginAction = ({ commandBus }: LoginActionProps) => (req: Request, res: Response, next: NextFunction) => {
   commandBus
     .execute(
       new LoginCommand({
-        authToken: req.body.authToken,
+        email: req.body.email,
+        password: req.body.password,
       }),
     )
     .then(commandResult => {
-      res.json(commandResult);
+      res.json({
+        accessToken: commandResult
+      });
     })
     .catch(next);
 };

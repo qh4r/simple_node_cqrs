@@ -3,7 +3,6 @@ import { AwilixContainer, Lifetime, Resolver } from "awilix";
 import { Application } from "express";
 import * as http from "http";
 import { createConnection, ConnectionOptions } from "typeorm";
-import { makeApiConfig } from "../config/services";
 import { createApp } from "./app/app";
 import { createRouter } from "./app/router";
 import { errorHandler } from "./middleware/error-handler";
@@ -17,7 +16,6 @@ import { usersRouting } from "./app/features/users/routing";
 // ROUTING_IMPORTS
 
 import LoginCommandHandler from "./app/features/users/handlers/login.handler";
-import UsersQueryHandler from "./app/features/users/query-handlers/users.query.handler";
 // HANDLERS_IMPORTS
 
 import EmailEventSubscriber from "./app/features/users/subscribers/email.subscriber";
@@ -25,8 +23,11 @@ import EmailEventSubscriber from "./app/features/users/subscribers/email.subscri
 
 import { cacheClient } from "./tools/cache-client";
 import * as db from "../config/db";
+import * as config from "../config/services";
+import SignUpCommandHandler from "./app/features/users/handlers/sign-up.handler";
+import { AuthenticationService } from "./app/services/authentication.service";
+import { UserModel } from "./app/features/users/models/user.model";
 
-const config = makeApiConfig();
 
 function asArray<T>(resolvers: Resolver<T>[]): Resolver<T[]> {
   return {
@@ -49,6 +50,7 @@ export async function createContainer(): Promise<AwilixContainer> {
   container.register({
     port: awilix.asValue(config.port),
     logger: awilix.asValue(winstonLogger),
+    accessTokenKey: awilix.asValue(config.accessTokenKey),
   });
 
   container.loadModules([ 
@@ -78,14 +80,19 @@ export async function createContainer(): Promise<AwilixContainer> {
     eventDispatcher: awilix.asClass(EventDispatcher).classic().singleton(),
     commandHandlers: asArray([
       awilix.asClass(LoginCommandHandler),
+      awilix.asClass(SignUpCommandHandler),
       // COMMAND_HANDLERS_SETUP
-    ]),
+    ] as Resolver<any>[]),
     commandBus: awilix.asClass(CommandBus).classic().singleton(),
     queryHandlers: asArray([
-      awilix.asClass(UsersQueryHandler),
       // QUERY_HANDLERS_SETUP
     ]),
+    usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
     // MODELS_SETUP
+  });
+
+  container.register({
+    authenticationService: awilix.asClass(AuthenticationService),
   });
 
   container.register({
