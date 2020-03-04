@@ -1,4 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn, Index, CreateDateColumn } from "typeorm";
+import { Column, Entity, Index, CreateDateColumn, PrimaryColumn, BeforeInsert, OneToMany, BeforeUpdate } from "typeorm";
+import { TransactionModel } from "../../transaction/models/transaction.model";
+
+import v4 = require("uuid/v4");
 
 interface UserModelProps {
   email: string;
@@ -11,17 +14,16 @@ interface UserModelProps {
 }
 
 @Entity({
-  name: "User"
+  name: "User",
 })
 export class UserModel {
-
   public static create(data: Partial<UserModelProps>): UserModel {
     const entity = new UserModel();
     Object.assign(entity, data);
-    return entity
+    return entity;
   }
 
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryColumn("uuid")
   id: string;
 
   @Column({ length: 50 })
@@ -39,4 +41,27 @@ export class UserModel {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(
+    () => TransactionModel,
+    transaction => transaction.owner,
+  )
+  ownedTransaction: TransactionModel[];
+
+  @OneToMany(
+    () => TransactionModel,
+    transaction => transaction.target,
+  )
+  targetTransactions: TransactionModel[];
+
+  @BeforeInsert()
+  generateId = async () => {
+    this.id = this.id || v4();
+  };
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  lowercaseEmail = async () => {
+    this.email = this.email.toLowerCase();
+  };
 }

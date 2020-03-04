@@ -1,6 +1,6 @@
 import { Command } from "../../../../shared/command-bus";
 
-export const SIGN_UP_COMMAND_TYPE = 'users/SIGNUP';
+export const SIGN_UP_COMMAND_TYPE = "users/SIGNUP";
 
 export interface SignUpCommandPayload {
   email: string;
@@ -12,7 +12,5 @@ export interface SignUpCommandPayload {
 export class SignUpCommand implements Command<SignUpCommandPayload> {
   public type: string = SIGN_UP_COMMAND_TYPE;
 
-  constructor(public payload: SignUpCommandPayload) {
-
-  }
+  constructor(public payload: SignUpCommandPayload) {}
 }

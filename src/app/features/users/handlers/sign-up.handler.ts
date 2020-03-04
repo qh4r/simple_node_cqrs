@@ -11,12 +11,11 @@ export default class SignUpCommandHandler implements CommandHandler<SignUpComman
 
   private readonly authenticationService: AuthenticationService;
 
-  constructor({authenticationService}: SignUpCommandHandlerProps) {
+  constructor({ authenticationService }: SignUpCommandHandlerProps) {
     this.authenticationService = authenticationService;
   }
 
-
   async execute(command: SignUpCommand) {
     return this.authenticationService.register(command.payload);
-  };
+  }
 }

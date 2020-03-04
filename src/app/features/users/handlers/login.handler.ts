@@ -15,7 +15,7 @@ export default class LoginHandler implements CommandHandler<LoginCommand> {
 
   private readonly eventDispatcher: EventDispatcher;
 
-  constructor({authenticationService, eventDispatcher}: LoginHandlerProps) {
+  constructor({ authenticationService, eventDispatcher }: LoginHandlerProps) {
     this.authenticationService = authenticationService;
     this.eventDispatcher = eventDispatcher;
   }

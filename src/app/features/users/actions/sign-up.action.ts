@@ -1,11 +1,11 @@
-import {Request, Response, NextFunction} from 'express';
+import { Request, Response, NextFunction } from "express";
 import { celebrate, Joi } from "celebrate";
+import { CREATED } from "http-status-codes";
 import { CommandBus } from "../../../../shared/command-bus";
 import { SignUpCommand } from "../commands/sign-up.command";
-import { CREATED } from "http-status-codes";
 
 export interface SignUpActionProps {
-  commandBus: CommandBus
+  commandBus: CommandBus;
 }
 
 export const signUpActionValidation = celebrate(
@@ -17,21 +17,23 @@ export const signUpActionValidation = celebrate(
       repeatPassword: Joi.string().required(),
     }),
   },
-  { abortEarly: false }
+  { abortEarly: false },
 );
 
-const signUpAction = ({commandBus}: SignUpActionProps) => (req: Request, res: Response, next: NextFunction) => {
+const signUpAction = ({ commandBus }: SignUpActionProps) => (req: Request, res: Response, next: NextFunction) => {
   commandBus
-    .execute(new SignUpCommand({
-      email: req.body.email,
-      name: req.body.name,
-      password: req.body.password,
-      repeatPassword: req.body.repeatPassword,
-    }))
+    .execute(
+      new SignUpCommand({
+        email: req.body.email,
+        name: req.body.name,
+        password: req.body.password,
+        repeatPassword: req.body.repeatPassword,
+      }),
+    )
     .then(commandResult => {
       res.status(CREATED).json({
-        accessToken: commandResult
-      })
+        accessToken: commandResult,
+      });
     })
     .catch(next);
 };

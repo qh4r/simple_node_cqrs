@@ -10,12 +10,16 @@ import { CommandBus } from "./shared/command-bus";
 import { winstonLogger } from "./shared/logger";
 import { QueryBus } from "./shared/query-bus";
 import { EventDispatcher } from "./shared/event-dispatcher";
+import { TransactionModel } from "./app/features/transaction/models/transaction.model";
 // MODELS_IMPORTS
 
 import { usersRouting } from "./app/features/users/routing";
+import { transactionRouting } from "./app/features/transaction/routing";
 // ROUTING_IMPORTS
 
 import LoginCommandHandler from "./app/features/users/handlers/login.handler";
+import AddCommandHandler from "./app/features/transaction/handlers/add.handler";
+import BalanceQueryHandler from "./app/features/transaction/query-handlers/balance.query.handler";
 // HANDLERS_IMPORTS
 
 import EmailEventSubscriber from "./app/features/users/subscribers/email.subscriber";
@@ -27,6 +31,8 @@ import * as config from "../config/services";
 import SignUpCommandHandler from "./app/features/users/handlers/sign-up.handler";
 import { AuthenticationService } from "./app/services/authentication.service";
 import { UserModel } from "./app/features/users/models/user.model";
+import { authenticationMiddlewareFactory } from "./middleware/authentication.middleware";
+import { TransactionsService } from "./app/services/transactions.service";
 
 
 function asArray<T>(resolvers: Resolver<T>[]): Resolver<T[]> {
@@ -65,8 +71,10 @@ export async function createContainer(): Promise<AwilixContainer> {
   });
 
   container.register({
+    authenticationMiddleware: awilix.asFunction(authenticationMiddlewareFactory),
     usersRouting: awilix.asFunction(usersRouting),
-    // ROUTING_SETUP
+    transactionRouting: awilix.asFunction(transactionRouting),
+  // ROUTING_SETUP
   });
 
   container.register({
@@ -81,18 +89,22 @@ export async function createContainer(): Promise<AwilixContainer> {
     commandHandlers: asArray([
       awilix.asClass(LoginCommandHandler),
       awilix.asClass(SignUpCommandHandler),
+      awilix.asClass(AddCommandHandler),
       // COMMAND_HANDLERS_SETUP
     ] as Resolver<any>[]),
     commandBus: awilix.asClass(CommandBus).classic().singleton(),
     queryHandlers: asArray([
+      awilix.asClass(BalanceQueryHandler),
       // QUERY_HANDLERS_SETUP
     ]),
     usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
+    transactionRepository: awilix.asValue(dbConnection.getRepository(TransactionModel)),
     // MODELS_SETUP
   });
 
   container.register({
     authenticationService: awilix.asClass(AuthenticationService),
+    transactionsService: awilix.asClass(TransactionsService),
   });
 
   container.register({

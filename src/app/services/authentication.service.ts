@@ -1,11 +1,11 @@
 import { BAD_REQUEST, FORBIDDEN, UNAUTHORIZED } from "http-status-codes";
-import { HttpError } from "../../errors/http.error";
 import { Secret, sign, SignOptions, TokenExpiredError, verify } from "jsonwebtoken";
 import { promisify } from "util";
 import { Repository } from "typeorm";
-import { UserModel } from "../features/users/models/user.model";
 import { randomBytes, pbkdf2 } from "crypto";
 import { validate } from "email-validator";
+import { UserModel } from "../features/users/models/user.model";
+import { HttpError } from "../../errors/http.error";
 
 export interface AuthenticationServiceProps {
   usersRepository: Repository<UserModel>;
@@ -73,10 +73,10 @@ export class AuthenticationService {
   }
 
   async register(props: RegisterUserProps): Promise<string> {
-    if(!validate(props.email)) {
+    if (!validate(props.email)) {
       throw new HttpError("error.email.wrongFormat", BAD_REQUEST);
     }
-    if(props.password && (props.password.length < 8)) {
+    if (props.password && props.password.length < 8) {
       throw new HttpError("error.password.tooShort", BAD_REQUEST);
     }
     if (props.password !== props.repeatPassword) {
@@ -90,7 +90,7 @@ export class AuthenticationService {
       email: props.email,
       name: props.name,
       password: hashedPassword,
-      salt: salt,
+      salt,
     });
 
     try {
@@ -108,7 +108,7 @@ export class AuthenticationService {
       },
     });
 
-    if (user && await this.validatePassword(props.password, user)) {
+    if (user && (await this.validatePassword(props.password, user))) {
       return this.generateToken(user.id, user.name);
     }
 
@@ -129,9 +129,7 @@ export class AuthenticationService {
   }
 
   private async hashPassword(password: string, salt: string) {
-    return (
-      await asyncPbkdf2(password, salt, 1000, 64, `sha512`)
-    ).toString(`hex`);
+    return (await asyncPbkdf2(password, salt, 1000, 64, "sha512")).toString("hex");
   }
 
   private async validatePassword(password: string, user: UserModel): Promise<boolean> {
