@@ -4,9 +4,11 @@ import { TransactionModel } from "../features/transaction/models/transaction.mod
 import { Operation } from "../features/transaction/models/operation.enum";
 import { NotFoundError } from "../../errors/not-found.error";
 import { HttpError } from "../../errors/http.error";
+import { BalanceViewModel } from "../features/users/models/balance-view.model";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
+  balanceViewRepository: Repository<BalanceViewModel>;
 }
 
 export interface HandleOperationProps {
@@ -33,30 +35,18 @@ export class TransactionsService {
   }
 
   async getBalance(ownerId: string): Promise<number> {
-    const transactions = await this.dependencies.transactionRepository
-      .createQueryBuilder("transaction")
-      .where('transaction."ownerId"=:ownerId OR transaction."targetId"=:ownerId', {
-        ownerId,
-      })
-      .orderBy("transaction.createdAt", "ASC")
-      .getMany();
+    const balanceView = await this.dependencies.balanceViewRepository
+      .findOne({
+        where: {
+          id: ownerId,
+        },
+      });
 
-    return transactions.reduce((balance: number, transaction: TransactionModel): number => {
-      switch (transaction.operation) {
-        case Operation.TRANSFER:
-          if (transaction.ownerId === ownerId) {
-            return balance - transaction.amount;
-          }
-          return balance + transaction.amount;
+    if(!balanceView) {
+      throw new NotFoundError("error.user.notFound");
+    }
 
-        case Operation.DEPOSIT:
-          return balance + transaction.amount;
-        case Operation.WITHDRAW:
-          return balance - transaction.amount;
-        default:
-          return balance;
-      }
-    }, 0);
+    return balanceView.balance;
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<number> {

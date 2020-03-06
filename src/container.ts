@@ -11,6 +11,7 @@ import { winstonLogger } from "./shared/logger";
 import { QueryBus } from "./shared/query-bus";
 import { EventDispatcher } from "./shared/event-dispatcher";
 import { TransactionModel } from "./app/features/transaction/models/transaction.model";
+import { BalanceViewModel } from "./app/features/users/models/balance-view.model";
 // MODELS_IMPORTS
 
 import { usersRouting } from "./app/features/users/routing";
@@ -99,6 +100,7 @@ export async function createContainer(): Promise<AwilixContainer> {
     ]),
     usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
     transactionRepository: awilix.asValue(dbConnection.getRepository(TransactionModel)),
+    balanceViewRepository: awilix.asValue(dbConnection.getRepository(BalanceViewModel)),
     // MODELS_SETUP
   });
 
