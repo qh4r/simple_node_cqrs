@@ -37,6 +37,9 @@ const balanceAction = ({ queryBus }: BalanceActionProps) => (req: Request, res: 
     )
     .then(queryResult => {
       res.json({
+        id: res.locals.user.id,
+        email: res.locals.user.email,
+        name: res.locals.user.name,
         balance: queryResult.result,
       });
     })
