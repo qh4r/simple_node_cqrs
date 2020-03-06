@@ -3,6 +3,7 @@ import { Operation } from "./operation.enum";
 import { UserModel } from "../../users/models/user.model";
 
 import v4 = require("uuid/v4");
+import { NumericColumnTransformer } from "../../../../shared/numeric-column-transformer/numeric-column-transformer";
 
 interface TransactionModelProps {
   operation: Operation;
@@ -52,7 +53,11 @@ export class TransactionModel {
   @Column({ name: "targetId", nullable: true })
   targetId?: string;
 
-  @Column()
+  @Column('numeric', {
+    precision: 7,
+    scale: 2,
+    transformer: new NumericColumnTransformer(),
+  })
   amount: number;
 
   @BeforeInsert()
