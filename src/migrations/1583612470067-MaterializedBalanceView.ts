@@ -1,10 +1,10 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class BalanceView1583519716271 implements MigrationInterface {
-    name = 'BalanceView1583519716271'
+export class MaterializedBalanceView1583612470067 implements MigrationInterface {
+    name = 'MaterializedBalanceView1583612470067'
 
     public async up(queryRunner: QueryRunner): Promise<any> {
-        await queryRunner.query(`CREATE VIEW "balance_view_model" AS 
+        await queryRunner.query(`CREATE MATERIALIZED VIEW "balance_view_model" AS 
         SELECT temp.id, temp.email, temp.name, SUM( CASE
                WHEN temp.operation::text = 'DEPOSIT' THEN temp.amount
                WHEN temp.operation::text = 'WITHDRAW' THEN temp.amount * -1

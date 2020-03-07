@@ -35,18 +35,13 @@ export class TransactionsService {
   }
 
   async getBalance(ownerId: string): Promise<number> {
-    const balanceView = await this.dependencies.balanceViewRepository
-      .findOne({
-        where: {
-          id: ownerId,
-        },
-      });
+    const balanceView = await this.dependencies.balanceViewRepository.findOne({
+      where: {
+        id: ownerId,
+      },
+    });
 
-    if(!balanceView) {
-      throw new NotFoundError("error.user.notFound");
-    }
-
-    return balanceView.balance;
+    return balanceView ? balanceView!.balance : 0;
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<number> {

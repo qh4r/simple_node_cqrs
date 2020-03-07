@@ -15,6 +15,8 @@ import { NumericColumnTransformer } from "../../../../shared/numeric-column-tran
           where temp.id is not null
           group by temp.id, temp.email, temp.name;
     `,
+  materialized: true,
+  name: "balance_view_model",
 })
 export class BalanceViewModel {
   @ViewColumn()

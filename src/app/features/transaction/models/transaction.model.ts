@@ -1,9 +1,21 @@
-import { BeforeInsert, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
+import {
+  AfterInsert,
+  AfterUpdate,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  Entity,
+  getRepository,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from "typeorm";
 import { Operation } from "./operation.enum";
 import { UserModel } from "../../users/models/user.model";
+import { NumericColumnTransformer } from "../../../../shared/numeric-column-transformer/numeric-column-transformer";
+import { BalanceViewModel } from "../../users/models/balance-view.model";
 
 import v4 = require("uuid/v4");
-import { NumericColumnTransformer } from "../../../../shared/numeric-column-transformer/numeric-column-transformer";
 
 interface TransactionModelProps {
   operation: Operation;
@@ -53,7 +65,7 @@ export class TransactionModel {
   @Column({ name: "targetId", nullable: true })
   targetId?: string;
 
-  @Column('numeric', {
+  @Column("numeric", {
     precision: 7,
     scale: 2,
     transformer: new NumericColumnTransformer(),
@@ -64,4 +76,10 @@ export class TransactionModel {
   generateId = async () => {
     this.id = this.id || v4();
   };
+
+  @AfterInsert()
+  @AfterUpdate()
+  async updateBalanceView() {
+    await getRepository(BalanceViewModel).query("REFRESH MATERIALIZED VIEW balance_view_model");
+  }
 }
