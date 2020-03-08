@@ -5,12 +5,15 @@ import { Operation } from "../features/transaction/models/operation.enum";
 import { NotFoundError } from "../../errors/not-found.error";
 import { HttpError } from "../../errors/http.error";
 import { UnitOfWork } from "../../shared/unit-of-work/unit-of-work";
-import { BalanceViewRepository } from "../repositories/balance-view.repository";
+import { BalanceProjectionRepository } from "../repositories/balance-projection.repository";
+import { UserModel } from "../features/users/models/user.model";
+import { BalanceProjector } from "../features/users/projections/balance/balance.projector";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
-  balanceViewRepository: BalanceViewRepository;
+  balanceProjectionRepository: BalanceProjectionRepository;
   unitOfWork: UnitOfWork;
+  balanceProjector: BalanceProjector;
 }
 
 export interface HandleOperationProps {
@@ -37,12 +40,22 @@ export class TransactionsService {
   }
 
   async getBalance(ownerId: string) {
-    return this.dependencies.balanceViewRepository.getBalanceValueById(ownerId);
+    return this.dependencies.balanceProjectionRepository.findOneOrFail(ownerId);
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
     return this.dependencies.unitOfWork.runTransaction(async transactionManager => {
-      const balanceViewRepository = transactionManager.getCustomRepository(BalanceViewRepository);
+      const balanceViewRepository = transactionManager.getCustomRepository(BalanceProjectionRepository);
+
+      const targetUser = transactionManager.getRepository(UserModel).findOne({
+        where: {
+          id: targetId,
+        },
+      });
+
+      if (!targetUser) {
+        throw new NotFoundError("error.transfer.target.notFound");
+      }
 
       const balance = await balanceViewRepository.getBalanceValueById(ownerId);
 
@@ -58,6 +71,16 @@ export class TransactionsService {
           operation: Operation.TRANSFER,
         }),
       );
+
+      await this.dependencies.balanceProjector.updateBalance(
+        {
+          ownerId,
+          targetId,
+          amount,
+          operation: Operation.TRANSFER,
+        },
+        transactionManager,
+      );
     });
   }
 
@@ -71,13 +94,20 @@ export class TransactionsService {
         }),
       );
 
-      await transactionManager.getCustomRepository(BalanceViewRepository).refreshBalanceView();
+      await this.dependencies.balanceProjector.updateBalance(
+        {
+          ownerId,
+          amount,
+          operation: Operation.DEPOSIT,
+        },
+        transactionManager,
+      );
     });
   }
 
   private async handleWithdraw(ownerId: string, amount: number): Promise<void> {
     return this.dependencies.unitOfWork.runTransaction(async transactionManager => {
-      const balanceViewRepository = transactionManager.getCustomRepository(BalanceViewRepository);
+      const balanceViewRepository = transactionManager.getCustomRepository(BalanceProjectionRepository);
       const balance = await balanceViewRepository.getBalanceValueById(ownerId);
 
       if (amount > balance) {
@@ -92,7 +122,14 @@ export class TransactionsService {
         }),
       );
 
-      await balanceViewRepository.refreshBalanceView();
+      await this.dependencies.balanceProjector.updateBalance(
+        {
+          ownerId,
+          amount,
+          operation: Operation.WITHDRAW,
+        },
+        transactionManager,
+      );
     });
   }
 }

@@ -7,7 +7,7 @@ const createDbConfigFromEnvs = (env: any) => ({
   url: env.POSTGRES_URL,
   synchronize: false,
   logging: true,
-  entities: ["/app/build/src/**/*.model.js"],
+  entities: ["/app/build/src/**/*.model.js", "/app/build/src/**/*.projection.js"],
   migrations: ["/app/build/src/migrations/*"],
   cli: {
     migrationsDir: "src/migrations",

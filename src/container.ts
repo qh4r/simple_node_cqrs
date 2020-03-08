@@ -33,8 +33,9 @@ import { AuthenticationService } from "./app/services/authentication.service";
 import { UserModel } from "./app/features/users/models/user.model";
 import { authenticationMiddlewareFactory } from "./middleware/authentication.middleware";
 import { TransactionsService } from "./app/services/transactions.service";
-import { BalanceViewRepository } from "./app/repositories/balance-view.repository";
+import { BalanceProjectionRepository } from "./app/repositories/balance-projection.repository";
 import { UnitOfWork } from "./shared/unit-of-work/unit-of-work";
+import { BalanceProjector } from "./app/features/users/projections/balance/balance.projector";
 
 
 function asArray<T>(resolvers: Resolver<T>[]): Resolver<T[]> {
@@ -103,13 +104,14 @@ export async function createContainer(): Promise<AwilixContainer> {
     ]),
     usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
     transactionRepository: awilix.asValue(dbConnection.getRepository(TransactionModel)),
-    balanceViewRepository: awilix.asValue(dbConnection.getCustomRepository(BalanceViewRepository)),
+    balanceProjectionRepository: awilix.asValue(dbConnection.getCustomRepository(BalanceProjectionRepository)),
     // MODELS_SETUP
   });
 
   container.register({
     authenticationService: awilix.asClass(AuthenticationService),
     transactionsService: awilix.asClass(TransactionsService),
+    balanceProjector: awilix.asClass(BalanceProjector),
   });
 
   container.register({

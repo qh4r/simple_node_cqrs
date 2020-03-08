@@ -1,8 +1,8 @@
 import { EntityManager, Connection } from "typeorm";
 
-export type TransactionCallback<T> = (
-  transactionManager: Pick<EntityManager, "getRepository" | "getCustomRepository">,
-) => Promise<T>;
+export type UnitOfWorkEntityManager = Pick<EntityManager, "getRepository" | "getCustomRepository">;
+
+export type TransactionCallback<T> = (transactionManager: UnitOfWorkEntityManager) => Promise<T>;
 
 export class UnitOfWork {
   constructor(private dbConnection: Connection) {}
@@ -12,8 +12,9 @@ export class UnitOfWork {
     await queryRunner.startTransaction();
     try {
       const transactionManager = queryRunner.manager;
-      await transactionCallback(transactionManager);
+      const result = await transactionCallback(transactionManager);
       await queryRunner.commitTransaction();
+      return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
