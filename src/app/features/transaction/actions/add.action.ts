@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { celebrate, Joi } from "celebrate";
+import { ACCEPTED } from "http-status-codes";
 import { CommandBus } from "../../../../shared/command-bus";
 import { AddCommand } from "../commands/add.command";
 import { Operation } from "../models/operation.enum";
@@ -54,7 +55,7 @@ const addAction = ({ commandBus }: AddActionProps) => (req: Request, res: Respon
       }),
     )
     .then(commandResult => {
-      res.json(commandResult.result);
+      res.sendStatus(ACCEPTED);
     })
     .catch(next);
 };
