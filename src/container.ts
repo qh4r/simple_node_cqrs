@@ -116,13 +116,13 @@ export async function createContainer(): Promise<AwilixContainer> {
     usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
     transactionRepository: awilix.asValue(dbConnection.getRepository(TransactionModel)),
     balanceProjectionRepository: awilix.asValue(dbConnection.getCustomRepository(BalanceProjectionRepository)),
+    balanceProjector: awilix.asClass(BalanceProjector),
     // MODELS_SETUP
   });
 
   container.register({
     authenticationService: awilix.asClass(AuthenticationService),
     transactionsService: awilix.asClass(TransactionsService),
-    balanceProjector: awilix.asClass(BalanceProjector),
   });
 
   container.register({

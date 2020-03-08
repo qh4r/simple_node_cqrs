@@ -8,7 +8,7 @@ import { NotFoundError } from "../../../../../errors/not-found.error";
 
 export interface BalanceProjectorProps {
   unitOfWork: UnitOfWork;
-  balanceProjection: Repository<BalanceProjection>;
+  balanceProjectionRepository: Repository<BalanceProjection>;
 }
 
 export interface UpdateBalanceProps {
@@ -31,7 +31,7 @@ export class BalanceProjector {
   }
 
   async createNewUserProjection({ id, name, email }: UserModel, manager?: UnitOfWorkEntityManager) {
-    const usersRepository = manager ? manager.getRepository(BalanceProjection) : this.dependencies.balanceProjection;
+    const usersRepository = manager ? manager.getRepository(BalanceProjection) : this.dependencies.balanceProjectionRepository;
     await usersRepository.save(
       BalanceProjection.create({
         id,
