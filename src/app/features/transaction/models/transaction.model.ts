@@ -78,7 +78,6 @@ export class TransactionModel {
   };
 
   @AfterInsert()
-  @AfterUpdate()
   async updateBalanceView() {
     await getRepository(BalanceViewModel).query("REFRESH MATERIALIZED VIEW balance_view_model");
   }

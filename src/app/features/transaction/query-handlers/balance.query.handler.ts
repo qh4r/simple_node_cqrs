@@ -12,7 +12,7 @@ export default class BalanceQueryHandler implements QueryHandler<BalanceQuery, B
   constructor(private dependencies: BalanceQueryHandlerProps) {}
 
   async execute(query: BalanceQuery): Promise<BalanceQueryResult> {
-    const balance = await this.dependencies.transactionsService.getBalance(query.payload.ownerId);
+    const balance = await this.dependencies.transactionsService.getUserBalanceInfo(query.payload.ownerId);
     // do something with the query and transform it to result.
     return new BalanceQueryResult(balance);
   }

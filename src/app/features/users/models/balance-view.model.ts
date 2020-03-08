@@ -3,15 +3,15 @@ import { NumericColumnTransformer } from "../../../../shared/numeric-column-tran
 
 @ViewEntity({
   expression: `
-        SELECT temp.id, temp.email, temp.name, SUM( CASE
+            SELECT temp.id, temp.email, temp.name,  SUM( CASE
                WHEN temp.operation::text = 'DEPOSIT' THEN temp.amount
                WHEN temp.operation::text = 'WITHDRAW' THEN temp.amount * -1
                WHEN temp.operation::text = 'TRANSFER' AND temp."ownerId"=temp.id THEN temp.amount * -1
                ELSE temp.amount
             END
           ) AS balance
-          from (select u.id, u.email, u.name, t.operation, t."ownerId", t."targetId", t.amount  from transaction as t left join "User" as u on u.id =  t."ownerId" 
-          union all select u.id, u.email, u.name, t.operation, t."ownerId", t."targetId", t.amount from transaction as t left join "User" as u on u.id =  t."targetId") as temp
+          from (select u.id, u.email, u.name, t.operation, t."ownerId", t."targetId", t.amount  from "User" as u left join transaction as t on u.id =  t."ownerId" 
+          union all select u.id, u.email, u.name, t.operation, t."ownerId", t."targetId", t.amount from "User" as u left join transaction as t on u.id =  t."targetId") as temp
           where temp.id is not null
           group by temp.id, temp.email, temp.name;
     `,
