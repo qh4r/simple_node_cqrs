@@ -21,7 +21,7 @@ export interface HandleOperationProps {
 export class TransactionsService {
   constructor(private dependencies: TransactionsServiceProps) {}
 
-  async handleOperation({ amount, operation, ownerId, targetId }: HandleOperationProps): Promise<number> {
+  async handleOperation({ amount, operation, ownerId, targetId }: HandleOperationProps): Promise<void> {
     switch (operation) {
       case Operation.TRANSFER:
         return this.handleTransfer(ownerId, targetId!, amount);
@@ -35,17 +35,16 @@ export class TransactionsService {
   }
 
   async getBalance(ownerId: string): Promise<number> {
-    const balanceView = await this.dependencies.balanceViewRepository
-      .findOne({
-        where: {
-          id: ownerId,
-        },
-      });
+    const balanceView = await this.dependencies.balanceViewRepository.findOne({
+      where: {
+        id: ownerId,
+      },
+    });
 
     return balanceView ? balanceView.balance : 0;
   }
 
-  private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<number> {
+  private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
     const balance = await this.getBalance(ownerId);
 
     if (amount > balance) {
@@ -60,13 +59,9 @@ export class TransactionsService {
         operation: Operation.TRANSFER,
       }),
     );
-
-    return balance - amount;
   }
 
-  private async handleDeposit(ownerId: string, amount: number): Promise<number> {
-    const balance = await this.getBalance(ownerId);
-
+  private async handleDeposit(ownerId: string, amount: number): Promise<void> {
     await this.dependencies.transactionRepository.save(
       TransactionModel.create({
         amount,
@@ -74,11 +69,9 @@ export class TransactionsService {
         operation: Operation.DEPOSIT,
       }),
     );
-
-    return balance + amount;
   }
 
-  private async handleWithdraw(ownerId: string, amount: number): Promise<number> {
+  private async handleWithdraw(ownerId: string, amount: number): Promise<void> {
     const balance = await this.getBalance(ownerId);
 
     if (amount > balance) {
@@ -92,7 +85,5 @@ export class TransactionsService {
         operation: Operation.WITHDRAW,
       }),
     );
-
-    return balance - amount;
   }
 }
