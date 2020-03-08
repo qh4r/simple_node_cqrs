@@ -6,10 +6,13 @@ import { randomBytes, pbkdf2 } from "crypto";
 import { validate } from "email-validator";
 import { UserModel } from "../features/users/models/user.model";
 import { HttpError } from "../../errors/http.error";
+import { UnitOfWork } from "../../shared/unit-of-work/unit-of-work";
+import { BalanceViewRepository } from "../repositories/balance-view.repository";
 
 export interface AuthenticationServiceProps {
   usersRepository: Repository<UserModel>;
   accessTokenKey: string;
+  unitOfWork: UnitOfWork;
 }
 
 export interface TokenPayload {
@@ -53,9 +56,12 @@ export class AuthenticationService {
 
   private readonly accessTokenKey: string;
 
-  constructor({ usersRepository, accessTokenKey }: AuthenticationServiceProps) {
+  private readonly unitOfWork: UnitOfWork;
+
+  constructor({ usersRepository, accessTokenKey, unitOfWork }: AuthenticationServiceProps) {
     this.usersRepository = usersRepository;
     this.accessTokenKey = accessTokenKey;
+    this.unitOfWork = unitOfWork;
   }
 
   async verifyToken(token: string): Promise<UserModel> {
@@ -94,7 +100,11 @@ export class AuthenticationService {
     });
 
     try {
-      const savedUser = await this.usersRepository.save(user);
+      const savedUser = await this.unitOfWork.runTransaction(async transactionManager => {
+        const newUser = await transactionManager.getRepository(UserModel).save(user);
+        await transactionManager.getCustomRepository(BalanceViewRepository).refreshBalanceView();
+        return newUser;
+      });
       return this.generateToken(savedUser.id, savedUser.name);
     } catch (e) {
       throw new HttpError("error.user.emailAlreadyInUse", BAD_REQUEST);

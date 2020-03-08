@@ -12,8 +12,9 @@ export class UnitOfWork {
     await queryRunner.startTransaction();
     try {
       const transactionManager = queryRunner.manager;
-      await transactionCallback(transactionManager);
+      const result = await transactionCallback(transactionManager);
       await queryRunner.commitTransaction();
+      return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

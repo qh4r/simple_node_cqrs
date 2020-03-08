@@ -37,7 +37,11 @@ export class TransactionsService {
   }
 
   async getBalance(ownerId: string) {
-    return this.dependencies.balanceViewRepository.getBalanceValueById(ownerId);
+    return this.dependencies.balanceViewRepository.findOneOrFail({
+      where: {
+        id: ownerId,
+      },
+    });
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
