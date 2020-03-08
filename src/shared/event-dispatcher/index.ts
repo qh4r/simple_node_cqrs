@@ -1,14 +1,19 @@
+import { RedisClient } from "redis";
 import { Logger } from "../logger";
 
 export type Event = {
   name: string;
-  payload: {};
+  payload: any;
 };
 
 export type EventSubscribersMeta = { name: string; method: string };
 
 export interface EventSubscriberInterface {
   getSubscribedEvents(): EventSubscribersMeta[];
+}
+
+export interface EventDispatcherInterface {
+  dispatch(event: Event): Promise<void>;
 }
 
 export type Subscriber = (event: Event) => Promise<void>;
@@ -20,16 +25,34 @@ export class EventDispatcher {
 
   private subscribers: Subscribers[] = [];
 
-  constructor(logger: Logger, eventSubscribers: EventSubscriberInterface[] = []) {
+  private redisPublisher: RedisClient;
+
+  private redisSubscriber: RedisClient;
+
+  constructor(
+    logger: Logger,
+    eventSubscribers: EventSubscriberInterface[] = [],
+    redisPublisher: RedisClient,
+    redisSubscriber: RedisClient,
+  ) {
     if (eventSubscribers) {
       this.addSubscribers(eventSubscribers);
     }
 
     this.logger = logger;
-  }
+    this.redisPublisher = redisPublisher;
+    this.redisSubscriber = redisSubscriber;
 
-  public subscribe(name: string, subscriber: Subscriber) {
-    this.subscribers.push({ name, subscriber });
+    this.redisSubscriber.on("message", (channel, message) => {
+      const event = JSON.parse(message);
+      this.subscribers
+        .filter(s => s.name === event.name)
+        .map(({ subscriber }) =>
+          subscriber(event).catch(e => this.logger.debug(`Subscriber failed to handle event ${event.name}`, e)),
+        );
+    });
+
+    this.redisSubscriber.subscribe("event");
   }
 
   public addSubscribers(subscribers: EventSubscriberInterface[]) {
@@ -52,12 +75,6 @@ export class EventDispatcher {
   public async dispatch(event: Event) {
     this.logger.debug(`Dispatching event ${event.name}@${JSON.stringify(event.payload)}`);
 
-    const promises = this.subscribers
-      .filter(s => s.name === event.name)
-      .map(({ subscriber }) =>
-        subscriber(event).catch(e => this.logger.debug(`Subscriber failed to handle event ${event.name}`, e)),
-      );
-
-    await Promise.all(promises);
+    this.redisPublisher.publish("event", JSON.stringify(event));
   }
 }

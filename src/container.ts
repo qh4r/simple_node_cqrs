@@ -9,7 +9,7 @@ import { errorHandler } from "./middleware/error-handler";
 import { CommandBus } from "./shared/command-bus";
 import { winstonLogger } from "./shared/logger";
 import { QueryBus } from "./shared/query-bus";
-import { EventDispatcher } from "./shared/event-dispatcher";
+import { EventDispatcher, EventSubscriberInterface } from "./shared/event-dispatcher";
 import { TransactionModel } from "./app/features/transaction/models/transaction.model";
 // MODELS_IMPORTS
 
@@ -23,11 +23,14 @@ import BalanceQueryHandler from "./app/features/transaction/query-handlers/balan
 // HANDLERS_IMPORTS
 
 import EmailEventSubscriber from "./app/features/users/subscribers/email.subscriber";
+import NewTransactionEventSubscriber from "./app/features/transaction/subscribers/new-transaction.subscriber";
+import NewUserEventSubscriber from "./app/features/users/subscribers/new-user.subscriber";
 // SUBSCRIBERS_IMPORTS
 
 import { cacheClient } from "./tools/cache-client";
 import * as db from "../config/db";
 import * as config from "../config/services";
+import * as redisConfig from "../config/redis";
 import SignUpCommandHandler from "./app/features/users/handlers/sign-up.handler";
 import { AuthenticationService } from "./app/services/authentication.service";
 import { UserModel } from "./app/features/users/models/user.model";
@@ -36,6 +39,7 @@ import { TransactionsService } from "./app/services/transactions.service";
 import { BalanceProjectionRepository } from "./app/repositories/balance-projection.repository";
 import { UnitOfWork } from "./shared/unit-of-work/unit-of-work";
 import { BalanceProjector } from "./app/features/users/projections/balance/balance.projector";
+import { connectRedisClient } from "./shared/connect-redis-client/connect-redis-client";
 
 
 function asArray<T>(resolvers: Resolver<T>[]): Resolver<T[]> {
@@ -56,11 +60,16 @@ export async function createContainer(): Promise<AwilixContainer> {
   const dbConnection = await createConnection(db as ConnectionOptions);
   await dbConnection.runMigrations();
 
+  const redisPublisher = await connectRedisClient(redisConfig);
+  const redisSubscriber = await connectRedisClient(redisConfig);
+
   container.register({
     port: awilix.asValue(config.port),
     logger: awilix.asValue(winstonLogger),
     accessTokenKey: awilix.asValue(config.accessTokenKey),
     dbConnection: awilix.asValue(dbConnection),
+    redisPublisher: awilix.asValue(redisPublisher),
+    redisSubscriber: awilix.asValue(redisSubscriber),
   });
 
   container.loadModules([ 
@@ -82,14 +91,16 @@ export async function createContainer(): Promise<AwilixContainer> {
   });
 
   container.register({
-    unitOfWork: awilix.asClass(UnitOfWork, {injectionMode: "CLASSIC"}),
+    unitOfWork: awilix.asClass(UnitOfWork).classic(),
     errorHandler: awilix.asFunction(errorHandler),
     router: awilix.asFunction(createRouter),
     queryBus: awilix.asClass(QueryBus).classic().singleton(),
     eventSubscribers: asArray([
       awilix.asClass(EmailEventSubscriber),
+      awilix.asClass(NewTransactionEventSubscriber),
+      awilix.asClass(NewUserEventSubscriber),
       // SUBSCRIBERS_SETUP
-    ]),
+    ] as Resolver<EventSubscriberInterface>[]),
     eventDispatcher: awilix.asClass(EventDispatcher).classic().singleton(),
     commandHandlers: asArray([
       awilix.asClass(LoginCommandHandler),

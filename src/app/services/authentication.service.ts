@@ -7,13 +7,14 @@ import { validate } from "email-validator";
 import { UserModel } from "../features/users/models/user.model";
 import { HttpError } from "../../errors/http.error";
 import { UnitOfWork } from "../../shared/unit-of-work/unit-of-work";
-import { BalanceProjector } from "../features/users/projections/balance/balance.projector";
+import { EventDispatcherInterface } from "../../shared/event-dispatcher";
+import { NEW_USER_EVENT_NAME } from "../features/users/subscribers/new-user.subscriber";
 
 export interface AuthenticationServiceProps {
   usersRepository: Repository<UserModel>;
   accessTokenKey: string;
   unitOfWork: UnitOfWork;
-  balanceProjector: BalanceProjector;
+  eventDispatcher: EventDispatcherInterface;
 }
 
 export interface TokenPayload {
@@ -59,13 +60,13 @@ export class AuthenticationService {
 
   private readonly unitOfWork: UnitOfWork;
 
-  private readonly balanceProjector: BalanceProjector;
+  private readonly eventDispatcher: EventDispatcherInterface;
 
-  constructor({ usersRepository, accessTokenKey, unitOfWork, balanceProjector }: AuthenticationServiceProps) {
+  constructor({ usersRepository, accessTokenKey, unitOfWork, eventDispatcher }: AuthenticationServiceProps) {
     this.usersRepository = usersRepository;
     this.accessTokenKey = accessTokenKey;
     this.unitOfWork = unitOfWork;
-    this.balanceProjector = balanceProjector;
+    this.eventDispatcher = eventDispatcher;
   }
 
   async verifyToken(token: string): Promise<UserModel> {
@@ -104,10 +105,10 @@ export class AuthenticationService {
     });
 
     try {
-      const savedUser = await this.unitOfWork.runTransaction(async transactionManager => {
-        const newUser = await transactionManager.getRepository(UserModel).save(user);
-        await this.balanceProjector.createNewUserProjection(newUser, transactionManager);
-        return newUser;
+      const savedUser = await this.usersRepository.save(user);
+      await this.eventDispatcher.dispatch({
+        name: NEW_USER_EVENT_NAME,
+        payload: savedUser,
       });
 
       return this.generateToken(savedUser.id, savedUser.name);

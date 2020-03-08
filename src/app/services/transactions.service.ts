@@ -7,13 +7,14 @@ import { HttpError } from "../../errors/http.error";
 import { UnitOfWork, UnitOfWorkEntityManager } from "../../shared/unit-of-work/unit-of-work";
 import { BalanceProjectionRepository } from "../repositories/balance-projection.repository";
 import { UserModel } from "../features/users/models/user.model";
-import { BalanceProjector } from "../features/users/projections/balance/balance.projector";
+import { EventDispatcherInterface } from "../../shared/event-dispatcher";
+import { NEW_TRANSACTION_EVENT_NAME } from "../features/transaction/subscribers/new-transaction.subscriber";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
   balanceProjectionRepository: BalanceProjectionRepository;
   unitOfWork: UnitOfWork;
-  balanceProjector: BalanceProjector;
+  eventDispatcher: EventDispatcherInterface;
 }
 
 export interface HandleOperationProps {
@@ -57,36 +58,34 @@ export class TransactionsService {
         }),
       );
 
-      await this.dependencies.balanceProjector.updateBalance(
-        {
+      await this.dependencies.eventDispatcher.dispatch({
+        name: NEW_TRANSACTION_EVENT_NAME,
+        payload: {
           ownerId,
           targetId,
           amount,
           operation: Operation.TRANSFER,
         },
-        transactionManager,
-      );
+      });
     });
   }
 
   private async handleDeposit(ownerId: string, amount: number): Promise<void> {
-    return this.dependencies.unitOfWork.runTransaction(async transactionManager => {
-      await transactionManager.getRepository(TransactionModel).save(
-        TransactionModel.create({
-          amount,
-          ownerId,
-          operation: Operation.DEPOSIT,
-        }),
-      );
+    await this.dependencies.transactionRepository.save(
+      TransactionModel.create({
+        amount,
+        ownerId,
+        operation: Operation.DEPOSIT,
+      }),
+    );
 
-      await this.dependencies.balanceProjector.updateBalance(
-        {
-          ownerId,
-          amount,
-          operation: Operation.DEPOSIT,
-        },
-        transactionManager,
-      );
+    await this.dependencies.eventDispatcher.dispatch({
+      name: NEW_TRANSACTION_EVENT_NAME,
+      payload: {
+        ownerId,
+        amount,
+        operation: Operation.DEPOSIT,
+      },
     });
   }
 
@@ -102,19 +101,21 @@ export class TransactionsService {
         }),
       );
 
-      await this.dependencies.balanceProjector.updateBalance(
-        {
+      await this.dependencies.eventDispatcher.dispatch({
+        name: NEW_TRANSACTION_EVENT_NAME,
+        payload: {
           ownerId,
           amount,
           operation: Operation.WITHDRAW,
         },
-        transactionManager,
-      );
+      });
     });
   }
 
   private async ensureHasFounds(ownerId: string, amount: number, transactionManager: UnitOfWorkEntityManager) {
-    const balance = await transactionManager.getCustomRepository(BalanceProjectionRepository).getBalanceValueById(ownerId);
+    const balance = await transactionManager
+      .getCustomRepository(BalanceProjectionRepository)
+      .getBalanceValueById(ownerId);
 
     if (amount > balance) {
       throw new HttpError("error.notEnoughFounds", BAD_REQUEST);

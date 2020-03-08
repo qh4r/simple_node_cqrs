@@ -1,11 +1,11 @@
 import { CommandHandler } from "../../../../shared/command-bus";
 import { LOGIN_COMMAND_TYPE, LoginCommand } from "../commands/login.command";
 import { AuthenticationService } from "../../../services/authentication.service";
-import { EventDispatcher } from "../../../../shared/event-dispatcher";
+import { EventDispatcherInterface } from "../../../../shared/event-dispatcher";
 
 export interface LoginHandlerProps {
   authenticationService: AuthenticationService;
-  eventDispatcher: EventDispatcher;
+  eventDispatcher: EventDispatcherInterface;
 }
 
 export default class LoginHandler implements CommandHandler<LoginCommand> {
@@ -13,7 +13,7 @@ export default class LoginHandler implements CommandHandler<LoginCommand> {
 
   private readonly authenticationService: AuthenticationService;
 
-  private readonly eventDispatcher: EventDispatcher;
+  private readonly eventDispatcher: EventDispatcherInterface;
 
   constructor({ authenticationService, eventDispatcher }: LoginHandlerProps) {
     this.authenticationService = authenticationService;
