@@ -1,7 +1,9 @@
 import { EntityManager, Connection } from "typeorm";
 
+export type UnitOfWorkTransactionManager = Pick<EntityManager, "getRepository" | "getCustomRepository">;
+
 export type TransactionCallback<T> = (
-  transactionManager: Pick<EntityManager, "getRepository" | "getCustomRepository">,
+  transactionManager: UnitOfWorkTransactionManager,
 ) => Promise<T>;
 
 export class UnitOfWork {

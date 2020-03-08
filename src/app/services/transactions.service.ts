@@ -4,8 +4,9 @@ import { TransactionModel } from "../features/transaction/models/transaction.mod
 import { Operation } from "../features/transaction/models/operation.enum";
 import { NotFoundError } from "../../errors/not-found.error";
 import { HttpError } from "../../errors/http.error";
-import { UnitOfWork } from "../../shared/unit-of-work/unit-of-work";
+import { UnitOfWork, UnitOfWorkTransactionManager } from "../../shared/unit-of-work/unit-of-work";
 import { BalanceViewRepository } from "../repositories/balance-view.repository";
+import { UserModel } from "../features/users/models/user.model";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
@@ -46,13 +47,8 @@ export class TransactionsService {
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
     return this.dependencies.unitOfWork.runTransaction(async transactionManager => {
-      const balanceViewRepository = transactionManager.getCustomRepository(BalanceViewRepository);
-
-      const balance = await balanceViewRepository.getBalanceValueById(ownerId);
-
-      if (amount > balance) {
-        throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-      }
+      await this.ensureUserExists(targetId, transactionManager);
+      await this.ensureHasFounds(ownerId, amount, transactionManager);
 
       await transactionManager.getRepository(TransactionModel).save(
         TransactionModel.create({
@@ -62,6 +58,8 @@ export class TransactionsService {
           operation: Operation.TRANSFER,
         }),
       );
+
+      await transactionManager.getCustomRepository(BalanceViewRepository).refreshBalanceView();
     });
   }
 
@@ -81,12 +79,7 @@ export class TransactionsService {
 
   private async handleWithdraw(ownerId: string, amount: number): Promise<void> {
     return this.dependencies.unitOfWork.runTransaction(async transactionManager => {
-      const balanceViewRepository = transactionManager.getCustomRepository(BalanceViewRepository);
-      const balance = await balanceViewRepository.getBalanceValueById(ownerId);
-
-      if (amount > balance) {
-        throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-      }
+      await this.ensureHasFounds(ownerId, amount, transactionManager);
 
       await transactionManager.getRepository(TransactionModel).save(
         TransactionModel.create({
@@ -96,7 +89,28 @@ export class TransactionsService {
         }),
       );
 
-      await balanceViewRepository.refreshBalanceView();
+      await transactionManager.getCustomRepository(BalanceViewRepository).refreshBalanceView();
     });
   }
+
+  private async ensureHasFounds(ownerId: string, amount: number, transactionManager: UnitOfWorkTransactionManager) {
+    const balance = await transactionManager.getCustomRepository(BalanceViewRepository).getBalanceValueById(ownerId);
+
+    if (amount > balance) {
+      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
+    }
+  }
+
+  private async ensureUserExists(targetId: string, transactionManager: UnitOfWorkTransactionManager) {
+    const targetUser = await transactionManager.getRepository(UserModel).findOne({
+      where: {
+        id: targetId,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundError("error.transfer.target.notFound");
+    }
+  }
+
 }
