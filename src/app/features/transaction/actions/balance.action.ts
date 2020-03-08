@@ -14,20 +14,6 @@ export const balanceActionValidation = celebrate(
   { abortEarly: false },
 );
 
-/**
- * @swagger
- *
- * /api/transaction/balance:
- *   get:
- *     description: desc
- *     responses:
- *       201:
- *         description: desc
- *       400:
- *         description: Validation Error
- *       500:
- *         description: Internal Server Error
- */
 const balanceAction = ({ queryBus }: BalanceActionProps) => (req: Request, res: Response, next: NextFunction) => {
   queryBus
     .execute(

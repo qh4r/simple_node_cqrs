@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { celebrate, Joi } from "celebrate";
+import { ACCEPTED } from "http-status-codes";
 import { CommandBus } from "../../../../shared/command-bus";
 import { AddCommand } from "../commands/add.command";
 import { Operation } from "../models/operation.enum";
@@ -31,20 +32,6 @@ export const addActionValidation = (req: Request, res: Response, next: NextFunct
   )(req, res, next);
 };
 
-/**
- * @swagger
- *
- * /api/transaction/add:
- *   post:
- *     description: desc
- *     responses:
- *       201:
- *         description: desc
- *       400:
- *         description: Validation Error
- *       500:
- *         description: Internal Server Error
- */
 const addAction = ({ commandBus }: AddActionProps) => (req: Request, res: Response, next: NextFunction) => {
   commandBus
     .execute(
@@ -53,8 +40,8 @@ const addAction = ({ commandBus }: AddActionProps) => (req: Request, res: Respon
         ownerId: res.locals.user.id,
       }),
     )
-    .then(commandResult => {
-      res.json(commandResult.result);
+    .then(() => {
+      res.sendStatus(ACCEPTED);
     })
     .catch(next);
 };

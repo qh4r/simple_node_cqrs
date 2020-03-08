@@ -11,7 +11,6 @@ import { winstonLogger } from "./shared/logger";
 import { QueryBus } from "./shared/query-bus";
 import { EventDispatcher } from "./shared/event-dispatcher";
 import { TransactionModel } from "./app/features/transaction/models/transaction.model";
-import { BalanceViewModel } from "./app/features/users/models/balance-view.model";
 // MODELS_IMPORTS
 
 import { usersRouting } from "./app/features/users/routing";
@@ -34,6 +33,8 @@ import { AuthenticationService } from "./app/services/authentication.service";
 import { UserModel } from "./app/features/users/models/user.model";
 import { authenticationMiddlewareFactory } from "./middleware/authentication.middleware";
 import { TransactionsService } from "./app/services/transactions.service";
+import { BalanceViewRepository } from "./app/repositories/balance-view.repository";
+import { UnitOfWork } from "./shared/unit-of-work/unit-of-work";
 
 
 function asArray<T>(resolvers: Resolver<T>[]): Resolver<T[]> {
@@ -58,6 +59,7 @@ export async function createContainer(): Promise<AwilixContainer> {
     port: awilix.asValue(config.port),
     logger: awilix.asValue(winstonLogger),
     accessTokenKey: awilix.asValue(config.accessTokenKey),
+    dbConnection: awilix.asValue(dbConnection),
   });
 
   container.loadModules([ 
@@ -79,6 +81,7 @@ export async function createContainer(): Promise<AwilixContainer> {
   });
 
   container.register({
+    unitOfWork: awilix.asClass(UnitOfWork, {injectionMode: "CLASSIC"}),
     errorHandler: awilix.asFunction(errorHandler),
     router: awilix.asFunction(createRouter),
     queryBus: awilix.asClass(QueryBus).classic().singleton(),
@@ -100,7 +103,7 @@ export async function createContainer(): Promise<AwilixContainer> {
     ]),
     usersRepository: awilix.asValue(dbConnection.getRepository(UserModel)),
     transactionRepository: awilix.asValue(dbConnection.getRepository(TransactionModel)),
-    balanceViewRepository: awilix.asValue(dbConnection.getRepository(BalanceViewModel)),
+    balanceViewRepository: awilix.asValue(dbConnection.getCustomRepository(BalanceViewRepository)),
     // MODELS_SETUP
   });
 

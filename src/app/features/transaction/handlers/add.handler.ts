@@ -12,10 +12,6 @@ export default class AddHandler implements CommandHandler<AddCommand> {
   constructor(private dependencies: AddHandlerProps) {}
 
   async execute(command: AddCommand) {
-    const newBalance = await this.dependencies.transactionsService.handleOperation(command.payload);
-
-    return {
-      result: newBalance,
-    };
+    return this.dependencies.transactionsService.handleOperation(command.payload);
   }
 }
