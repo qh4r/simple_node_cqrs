@@ -4,9 +4,11 @@ import { TransactionModel } from "../features/transaction/models/transaction.mod
 import { Operation } from "../features/transaction/models/operation.enum";
 import { NotFoundError } from "../../errors/not-found.error";
 import { HttpError } from "../../errors/http.error";
+import { UserModel } from "../features/users/models/user.model";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
+  usersRepository: Repository<UserModel>;
 }
 
 export interface HandleOperationProps {
@@ -60,11 +62,8 @@ export class TransactionsService {
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
-    const balance = await this.getBalance(ownerId);
-
-    if (amount > balance) {
-      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-    }
+    await this.ensureUserExists(targetId);
+    await this.ensureHasFounds(ownerId, amount);
 
     await this.dependencies.transactionRepository.save(
       TransactionModel.create({
@@ -87,11 +86,7 @@ export class TransactionsService {
   }
 
   private async handleWithdraw(ownerId: string, amount: number): Promise<void> {
-    const balance = await this.getBalance(ownerId);
-
-    if (amount > balance) {
-      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-    }
+    await this.ensureHasFounds(ownerId, amount);
 
     await this.dependencies.transactionRepository.save(
       TransactionModel.create({
@@ -100,5 +95,25 @@ export class TransactionsService {
         operation: Operation.WITHDRAW,
       }),
     );
+  }
+
+  private async ensureHasFounds(ownerId: string, amount: number) {
+    const balance = await this.getBalance(ownerId);
+
+    if (amount > balance) {
+      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
+    }
+  }
+
+  private async ensureUserExists(targetId: string) {
+    const targetUser = await this.dependencies.usersRepository.findOne({
+      where: {
+        id: targetId,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundError("error.transfer.target.notFound");
+    }
   }
 }
