@@ -5,10 +5,12 @@ import { Operation } from "../features/transaction/models/operation.enum";
 import { NotFoundError } from "../../errors/not-found.error";
 import { HttpError } from "../../errors/http.error";
 import { BalanceViewModel } from "../features/users/models/balance-view.model";
+import { UserModel } from "../features/users/models/user.model";
 
 export interface TransactionsServiceProps {
   transactionRepository: Repository<TransactionModel>;
   balanceViewRepository: Repository<BalanceViewModel>;
+  usersRepository: Repository<UserModel>;
 }
 
 export interface HandleOperationProps {
@@ -34,22 +36,27 @@ export class TransactionsService {
     }
   }
 
-  async getBalance(ownerId: string): Promise<number> {
+  async getUserBalanceInfo(ownerId: string): Promise<BalanceViewModel> {
+    return this.dependencies.balanceViewRepository.findOneOrFail({
+      where: {
+        id: ownerId,
+      },
+    });
+  }
+
+  private async getBalance(ownerId: string): Promise<number> {
     const balanceView = await this.dependencies.balanceViewRepository.findOne({
       where: {
         id: ownerId,
       },
     });
 
-    return balanceView ? balanceView.balance : 0;
+    return balanceView ? balanceView!.balance : 0;
   }
 
   private async handleTransfer(ownerId: string, targetId: string, amount: number): Promise<void> {
-    const balance = await this.getBalance(ownerId);
-
-    if (amount > balance) {
-      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-    }
+    await this.ensureUserExists(targetId);
+    await this.ensureHasFounds(ownerId, amount);
 
     await this.dependencies.transactionRepository.save(
       TransactionModel.create({
@@ -72,11 +79,7 @@ export class TransactionsService {
   }
 
   private async handleWithdraw(ownerId: string, amount: number): Promise<void> {
-    const balance = await this.getBalance(ownerId);
-
-    if (amount > balance) {
-      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
-    }
+    await this.ensureHasFounds(ownerId, amount);
 
     await this.dependencies.transactionRepository.save(
       TransactionModel.create({
@@ -85,5 +88,25 @@ export class TransactionsService {
         operation: Operation.WITHDRAW,
       }),
     );
+  }
+
+  private async ensureHasFounds(ownerId: string, amount: number) {
+    const balance = await this.getBalance(ownerId);
+
+    if (amount > balance) {
+      throw new HttpError("error.notEnoughFounds", BAD_REQUEST);
+    }
+  }
+
+  private async ensureUserExists(targetId: string) {
+    const targetUser = await this.dependencies.usersRepository.findOne({
+      where: {
+        id: targetId,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundError("error.transfer.target.notFound");
+    }
   }
 }
