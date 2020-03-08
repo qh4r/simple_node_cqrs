@@ -4,6 +4,6 @@ export class NumericColumnTransformer {
   }
 
   from(data: string): number {
-    return parseFloat(data);
+    return parseFloat(data) || 0;
   }
 }
