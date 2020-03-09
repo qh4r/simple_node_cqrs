@@ -7,12 +7,10 @@ import {
   BeforeInsert,
   OneToMany,
   BeforeUpdate,
-  AfterInsert, AfterUpdate, getRepository,
 } from "typeorm";
 import { TransactionModel } from "../../transaction/models/transaction.model";
 
 import v4 = require("uuid/v4");
-import { BalanceViewModel } from "./balance-view.model";
 
 interface UserModelProps {
   email: string;
@@ -75,10 +73,4 @@ export class UserModel {
   lowercaseEmail = async () => {
     this.email = this.email.toLowerCase();
   };
-
-  @AfterInsert()
-  @AfterUpdate()
-  async updateBalanceView() {
-    await getRepository(BalanceViewModel).query("REFRESH MATERIALIZED VIEW balance_view_model");
-  }
 }
